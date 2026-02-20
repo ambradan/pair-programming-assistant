@@ -144,7 +144,7 @@ export class LLMProvider {
       }
     );
 
-    const data = await response.json();
+    const data: any = await response.json();
     const latencyMs = Date.now() - start;
 
     const text =

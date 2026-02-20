@@ -1,6 +1,7 @@
 {
   "name": "pair-programming-assistant",
   "version": "0.1.0",
+  "type": "module",
   "description": "AI-powered pair programming assistant with code navigation and live suggestions",
   "main": "dist/server.js",
   "scripts": {

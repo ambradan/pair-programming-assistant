@@ -320,6 +320,39 @@ export async function assistRoutes(fastify: FastifyInstance) {
     return { data: { file, status: "reverted" } };
   });
 
+/**
+   * POST /clone
+   * Clone a git repository to a local temp directory.
+   */
+  fastify.post<{
+    Body: { gitUrl: string };
+  }>("/clone", async (request, reply) => {
+    const { gitUrl } = request.body;
+    if (!gitUrl) {
+      return reply.status(400).send({
+        error: "ValidationError",
+        message: "gitUrl is required",
+      });
+    }
+    try {
+      const { cloneRepository } = await import("../services/git-clone.service.js");
+      const result = cloneRepository(gitUrl);
+      return {
+        data: {
+          localPath: result.localPath,
+          cached: result.cached,
+          gitUrl,
+        },
+      };
+    } catch (error: any) {
+      fastify.log.error(error, "Clone failed");
+      return reply.status(500).send({
+        error: "CloneError",
+        message: error.message,
+      });
+    }
+  });
+
   // Cleanup watchers on server shutdown
   fastify.addHook("onClose", async () => {
     for (const cleanup of watcherCleanups.values()) {
