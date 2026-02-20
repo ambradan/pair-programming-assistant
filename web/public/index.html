@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PPA — Pair Programming Assistant</title>
+  <style>
+    :root {
+      --bg-primary: #1e1e2e;
+      --bg-secondary: #2d2d3f;
+      --bg-tertiary: #363649;
+      --text-primary: #cdd6f4;
+      --text-secondary: #a6adc8;
+      --accent: #89b4fa;
+      --accent-hover: #74c7ec;
+      --green: #a6e3a1;
+      --red: #f38ba8;
+      --yellow: #f9e2af;
+      --border: #45475a;
+      --code-bg: #181825;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header h1 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .status-bar {
+      display: flex;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 4px;
+    }
+
+    .status-dot.connected { background: var(--green); }
+    .status-dot.disconnected { background: var(--red); }
+
+    /* Main layout */
+    .main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Left panel: input + reasoning */
+    .left-panel {
+      width: 380px;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      background: var(--bg-secondary);
+    }
+
+    .input-area {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .input-area textarea {
+      width: 100%;
+      height: 80px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      padding: 10px;
+      font-size: 13px;
+      font-family: inherit;
+      resize: none;
+    }
+
+    .input-area textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .input-controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .btn {
+      padding: 6px 14px;
+      border: none;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg-primary);
+    }
+
+    .btn-primary:hover { background: var(--accent-hover); }
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-opus {
+      background: var(--yellow);
+      color: var(--bg-primary);
+    }
+
+    .model-indicator {
+      margin-left: auto;
+      font-size: 11px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Reasoning panel */
+    .reasoning-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .reasoning-section {
+      margin-bottom: 16px;
+    }
+
+    .reasoning-section h3 {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .reasoning-section p {
+      color: var(--text-secondary);
+    }
+
+    .alternative {
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      padding: 8px;
+      margin-top: 6px;
+    }
+
+    .alternative .label { color: var(--yellow); font-weight: 600; }
+    .alternative .why-not { color: var(--text-secondary); font-size: 12px; }
+
+    /* Right panel: code diff */
+    .right-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Navigation bar */
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      padding: 6px 12px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      gap: 8px;
+    }
+
+    .nav-bar .file-path {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-family: 'Consolas', 'Courier New', monospace;
+    }
+
+    .nav-bar .nav-buttons {
+      margin-left: auto;
+      display: flex;
+      gap: 4px;
+    }
+
+    .nav-btn {
+      padding: 3px 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border-radius: 3px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .nav-btn:hover { background: var(--accent); color: var(--bg-primary); }
+    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .nav-counter {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* Diff view */
+    .diff-container {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    .diff-pane {
+      flex: 1;
+      overflow: auto;
+      padding: 0;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .diff-pane.original { border-right: 1px solid var(--border); }
+
+    .diff-pane-header {
+      position: sticky;
+      top: 0;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      z-index: 1;
+    }
+
+    .diff-pane.original .diff-pane-header {
+      background: rgba(243, 139, 168, 0.15);
+      color: var(--red);
+    }
+
+    .diff-pane.proposed .diff-pane-header {
+      background: rgba(166, 227, 161, 0.15);
+      color: var(--green);
+    }
+
+    .code-line {
+      display: flex;
+      padding: 0 12px;
+      white-space: pre;
+    }
+
+    .line-number {
+      width: 40px;
+      text-align: right;
+      color: var(--text-secondary);
+      opacity: 0.5;
+      padding-right: 12px;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .line-content { flex: 1; }
+    .line-removed { background: rgba(243, 139, 168, 0.1); }
+    .line-added { background: rgba(166, 227, 161, 0.1); }
+
+    /* Explanation bar at bottom */
+    .explanation-bar {
+      padding: 10px 16px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 24px;
+    }
+
+    .explanation-box {
+      flex: 1;
+    }
+
+    .explanation-box h4 {
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .explanation-box p {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    /* Loading state */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-secondary);
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 10px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Empty state */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-secondary);
+      font-size: 14px;
+      gap: 8px;
+    }
+
+    .empty-state .shortcut {
+      font-size: 12px;
+      color: var(--accent);
+      background: var(--bg-tertiary);
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🤖 PPA — Pair Programming Assistant</h1>
+    <div class="status-bar">
+      <span><span class="status-dot" id="apiStatus"></span><span id="apiStatusText">Checking...</span></span>
+      <span id="modelInfo"></span>
+      <span id="latencyInfo"></span>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- Left Panel: Input + Reasoning -->
+    <div class="left-panel">
+      <div class="input-area">
+        <textarea
+          id="messageInput"
+          placeholder="Describe what you need...&#10;&#10;e.g. 'refactora il booking service per aggiungere validazione email'"
+        ></textarea>
+        <div class="input-controls">
+          <button class="btn btn-primary" id="sendBtn" onclick="sendAssist()">
+            Send (Ctrl+Enter)
+          </button>
+          <button class="btn btn-opus" id="opusBtn" onclick="sendAssist('opus')" title="Force Opus for complex requests">
+            ⚡ Opus
+          </button>
+          <button class="btn btn-secondary" id="reindexBtn" onclick="reindexProject()">
+            🔄 Re-index
+          </button>
+          <div class="model-indicator" id="lastModel"></div>
+        </div>
+      </div>
+
+      <div class="reasoning-panel" id="reasoningPanel">
+        <div class="empty-state">
+          <div>Type a request and press <span class="shortcut">Ctrl+Enter</span></div>
+          <div style="font-size:12px;margin-top:8px;">Configure project path below:</div>
+          <input type="text" id="projectPath"
+            value=""
+            placeholder="C:\path\to\your\project"
+            style="
+              width: 100%;
+              padding: 6px 8px;
+              background: var(--bg-tertiary);
+              border: 1px solid var(--border);
+              border-radius: 4px;
+              color: var(--text-primary);
+              font-size: 12px;
+              font-family: monospace;
+              margin-top: 4px;
+            "
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel: Code Diff -->
+    <div class="right-panel">
+      <div class="nav-bar" id="navBar" style="display:none;">
+        <span class="file-path" id="currentFile">—</span>
+        <div class="nav-buttons">
+          <button class="nav-btn" id="prevBtn" onclick="navigate(-1)" disabled>← Prev</button>
+          <span class="nav-counter" id="navCounter">0/0</span>
+          <button class="nav-btn" id="nextBtn" onclick="navigate(1)" disabled>Next →</button>
+          <span style="width:1px;height:20px;background:var(--border);margin:0 4px"></span>
+          <button class="nav-btn" id="applyBtn" onclick="applyChange(currentChangeIndex)" style="background:var(--green);color:var(--bg-primary)">✓ Apply</button>
+          <button class="nav-btn" id="applyAllBtn" onclick="applyAllChanges()" style="background:var(--green);color:var(--bg-primary)">✓✓ Apply All</button>
+          <button class="nav-btn" id="revertBtn" onclick="revertChange(currentChangeIndex)" style="background:var(--red);color:var(--bg-primary)">↩ Revert</button>
+        </div>
+      </div>
+
+      <div class="diff-container" id="diffContainer">
+        <div class="empty-state" id="emptyDiff">
+          <div style="font-size: 48px; opacity: 0.3;">⌨️</div>
+          <div>Code changes will appear here</div>
+        </div>
+      </div>
+
+      <div class="explanation-bar" id="explanationBar" style="display:none;">
+        <div class="explanation-box">
+          <h4>🔧 Technical</h4>
+          <p id="technicalExpl">—</p>
+        </div>
+        <div class="explanation-box">
+          <h4>💡 Plain English</h4>
+          <p id="plainExpl">—</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin + '/api';
+    let currentResponse = null;
+    let currentChangeIndex = 0;
+
+    // Keyboard shortcut
+    document.getElementById('messageInput').addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        sendAssist();
+      }
+    });
+
+    // Arrow key navigation
+    document.addEventListener('keydown', (e) => {
+      if (!currentResponse) return;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { navigate(-1); e.preventDefault(); }
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { navigate(1); e.preventDefault(); }
+    });
+
+    // Check API status on load
+    checkStatus();
+
+    async function checkStatus() {
+      try {
+        const res = await fetch(`${API_BASE}/status`);
+        const data = await res.json();
+        document.getElementById('apiStatus').className = 'status-dot connected';
+        document.getElementById('apiStatusText').textContent =
+          `API OK | Anthropic: ${data.anthropicConfigured ? '✓' : '✗'}`;
+      } catch {
+        document.getElementById('apiStatus').className = 'status-dot disconnected';
+        document.getElementById('apiStatusText').textContent = 'API Offline';
+      }
+    }
+
+    async function sendAssist(forceModel) {
+      const message = document.getElementById('messageInput').value.trim();
+      const projectPath = document.getElementById('projectPath').value.trim();
+
+      if (!message) return;
+      if (!projectPath) {
+        alert('Set the project path first');
+        return;
+      }
+
+      // Show loading
+      document.getElementById('sendBtn').disabled = true;
+      document.getElementById('sendBtn').textContent = '⏳ Thinking...';
+      document.getElementById('diffContainer').innerHTML = '<div class="loading"><div class="spinner"></div>Analyzing codebase...</div>';
+
+      try {
+        const res = await fetch(`${API_BASE}/assist`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, projectPath, forceModel }),
+        });
+
+        const json = await res.json();
+
+        // Check for API errors
+        if (!res.ok || json.error) {
+          throw new Error(json.message || json.error || `API returned ${res.status}`);
+        }
+
+        const data = json.data;
+        if (!data) {
+          throw new Error('No data in response');
+        }
+
+        currentResponse = data;
+        currentChangeIndex = 0;
+
+        // Update model info
+        document.getElementById('lastModel').textContent = `${data.model} • ${data.latencyMs}ms`;
+        document.getElementById('latencyInfo').textContent = '';
+
+        // Render reasoning
+        renderReasoning(data);
+
+        // Render first change
+        if (data.changes.length > 0) {
+          document.getElementById('navBar').style.display = 'flex';
+          document.getElementById('explanationBar').style.display = 'flex';
+          renderChange(0);
+          updateNavigation();
+        } else {
+          document.getElementById('diffContainer').innerHTML =
+            '<div class="empty-state"><div>No code changes proposed</div><div style="font-size:12px;color:var(--text-secondary)">The AI might need more context. Try being more specific.</div></div>';
+        }
+      } catch (err) {
+        document.getElementById('diffContainer').innerHTML =
+          `<div class="empty-state" style="color:var(--red)">Error: ${err.message}</div>`;
+      } finally {
+        document.getElementById('sendBtn').disabled = false;
+        document.getElementById('sendBtn').textContent = 'Send (Ctrl+Enter)';
+      }
+    }
+
+    function renderReasoning(data) {
+      const panel = document.getElementById('reasoningPanel');
+
+      // Keep project path input
+      const projectPathValue = document.getElementById('projectPath')?.value ?? '';
+
+      let html = `
+        <div class="reasoning-section">
+          <h3>Intent</h3>
+          <p><strong>${data.intent.action}</strong> → ${data.intent.target}
+            (confidence: ${(data.intent.confidence * 100).toFixed(0)}%)</p>
+        </div>
+        <div class="reasoning-section">
+          <h3>Why This Solution</h3>
+          <p>${data.reasoning.whyThisSolution}</p>
+        </div>
+      `;
+
+      if (data.reasoning.alternatives?.length > 0) {
+        html += '<div class="reasoning-section"><h3>Alternatives Considered</h3>';
+        for (const alt of data.reasoning.alternatives) {
+          html += `
+            <div class="alternative">
+              <div class="label">${alt.description}</div>
+              <div class="why-not">↳ ${alt.whyNot}</div>
+            </div>
+          `;
+        }
+        html += '</div>';
+      }
+
+      if (data.dependentFiles?.length > 0) {
+        html += `
+          <div class="reasoning-section">
+            <h3>⚠️ Also Affected</h3>
+            <p>${data.dependentFiles.map(f => `<code>${f}</code>`).join(', ')}</p>
+          </div>
+        `;
+      }
+
+      html += `
+        <div class="reasoning-section" style="margin-top:auto;padding-top:12px;border-top:1px solid var(--border)">
+          <h3>Project Path</h3>
+          <input type="text" id="projectPath" value="${projectPathValue}"
+            style="width:100%;padding:4px 8px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-size:12px;font-family:monospace;"
+          />
+        </div>
+      `;
+
+      panel.innerHTML = html;
+    }
+
+    function renderChange(index) {
+      const change = currentResponse.changes[index];
+      if (!change) return;
+
+      document.getElementById('currentFile').textContent =
+        `${change.file} (L${change.startLine}–${change.endLine})`;
+
+      const container = document.getElementById('diffContainer');
+      container.innerHTML = `
+        <div class="diff-pane original">
+          <div class="diff-pane-header">Original</div>
+          ${renderCode(change.originalCode, change.startLine, 'removed')}
+        </div>
+        <div class="diff-pane proposed">
+          <div class="diff-pane-header">Proposed</div>
+          ${renderCode(change.proposedCode, change.startLine, 'added')}
+        </div>
+      `;
+
+      document.getElementById('technicalExpl').textContent = change.explanation.technical;
+      document.getElementById('plainExpl').textContent = change.explanation.plain;
+
+      currentChangeIndex = index;
+      updateNavigation();
+    }
+
+    function renderCode(code, startLine, type) {
+      if (!code) return '<div class="code-line"><span class="line-content" style="color:var(--text-secondary)">(empty)</span></div>';
+
+      return code.split('\n').map((line, i) => `
+        <div class="code-line line-${type}">
+          <span class="line-number">${startLine + i}</span>
+          <span class="line-content">${escapeHtml(line)}</span>
+        </div>
+      `).join('');
+    }
+
+    function navigate(direction) {
+      if (!currentResponse) return;
+      const newIndex = currentChangeIndex + direction;
+      if (newIndex >= 0 && newIndex < currentResponse.changes.length) {
+        renderChange(newIndex);
+      }
+    }
+
+    function updateNavigation() {
+      if (!currentResponse) return;
+      const total = currentResponse.changes.length;
+      document.getElementById('navCounter').textContent = `${currentChangeIndex + 1}/${total}`;
+      document.getElementById('prevBtn').disabled = currentChangeIndex === 0;
+      document.getElementById('nextBtn').disabled = currentChangeIndex >= total - 1;
+    }
+
+    async function reindexProject() {
+      const projectPath = document.getElementById('projectPath')?.value?.trim();
+      if (!projectPath) { alert('Set project path first'); return; }
+
+      document.getElementById('reindexBtn').textContent = '⏳ Indexing...';
+      try {
+        const res = await fetch(`${API_BASE}/index`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectPath }),
+        });
+        const { data } = await res.json();
+        alert(`Indexed: ${data.filesIndexed} files, ${data.symbolsFound} symbols, ${data.dependencyEdges} dependencies`);
+      } catch (err) {
+        alert(`Index failed: ${err.message}`);
+      } finally {
+        document.getElementById('reindexBtn').textContent = '🔄 Re-index';
+      }
+    }
+
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    async function applyChange(index) {
+      if (!currentResponse || !currentResponse.changes[index]) return;
+      const change = currentResponse.changes[index];
+      const projectPath = document.getElementById('projectPath')?.value?.trim();
+      if (!projectPath) { alert('Set project path first'); return; }
+
+      const btn = document.getElementById('applyBtn');
+      btn.textContent = '⏳...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(`${API_BASE}/apply`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projectPath,
+            changes: [change],
+          }),
+        });
+        const json = await res.json();
+        if (json.error) throw new Error(json.message);
+
+        const result = json.data.results[0];
+        if (result.status === 'applied') {
+          btn.textContent = '✅ Done';
+          btn.style.background = 'var(--green)';
+          // Mark this change as applied visually
+          currentResponse.changes[index]._applied = true;
+        } else {
+          throw new Error(result.status);
+        }
+      } catch (err) {
+        alert(`Apply failed: ${err.message}`);
+        btn.textContent = '✓ Apply';
+      } finally {
+        btn.disabled = false;
+        setTimeout(() => {
+          btn.textContent = currentResponse.changes[index]?._applied ? '✅ Applied' : '✓ Apply';
+        }, 1500);
+      }
+    }
+
+    async function applyAllChanges() {
+      if (!currentResponse || !currentResponse.changes.length) return;
+      const projectPath = document.getElementById('projectPath')?.value?.trim();
+      if (!projectPath) { alert('Set project path first'); return; }
+
+      const btn = document.getElementById('applyAllBtn');
+      btn.textContent = '⏳ Applying...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(`${API_BASE}/apply`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projectPath,
+            changes: currentResponse.changes,
+          }),
+        });
+        const json = await res.json();
+        if (json.error) throw new Error(json.message);
+
+        const allOk = json.data.results.every(r => r.status === 'applied');
+        const applied = json.data.results.filter(r => r.status === 'applied').length;
+        const total = json.data.results.length;
+
+        if (allOk) {
+          btn.textContent = `✅ All ${total} applied`;
+          currentResponse.changes.forEach(c => c._applied = true);
+        } else {
+          btn.textContent = `⚠️ ${applied}/${total} applied`;
+          const errors = json.data.results.filter(r => r.status !== 'applied');
+          alert(`Some changes failed:\n${errors.map(e => `${e.file}: ${e.status}`).join('\n')}`);
+        }
+      } catch (err) {
+        alert(`Apply all failed: ${err.message}`);
+      } finally {
+        btn.disabled = false;
+        setTimeout(() => {
+          btn.textContent = '✓✓ Apply All';
+        }, 3000);
+      }
+    }
+
+    async function revertChange(index) {
+      if (!currentResponse || !currentResponse.changes[index]) return;
+      const change = currentResponse.changes[index];
+      const projectPath = document.getElementById('projectPath')?.value?.trim();
+      if (!projectPath) { alert('Set project path first'); return; }
+
+      const btn = document.getElementById('revertBtn');
+      btn.textContent = '⏳...';
+
+      try {
+        const res = await fetch(`${API_BASE}/revert`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projectPath,
+            file: change.file,
+          }),
+        });
+        const json = await res.json();
+        if (json.error) throw new Error(json.message);
+
+        btn.textContent = '↩ Reverted';
+        currentResponse.changes[index]._applied = false;
+      } catch (err) {
+        alert(`Revert failed: ${err.message}`);
+      } finally {
+        setTimeout(() => {
+          btn.textContent = '↩ Revert';
+        }, 1500);
+      }
+    }
+  </script>
+</body>
+</html>

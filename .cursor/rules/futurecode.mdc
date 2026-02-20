@@ -1,0 +1,45 @@
+---
+description: "Futurecode project safety rules — type safety, error handling, architecture constraints"
+globs: ["**/*.py", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"]
+alwaysApply: true
+---
+
+# Futurecode Rules
+
+## Project Memory — Active Decisions
+Generated: 2026-02-20 11:02 UTC
+Decisions: 3 active | Rejections: 0 | Entities: 32 tracked
+
+## Active Decisions
+- **Environment variables for config** — [auto-inferred] Found .env in project
+- **Node.js runtime** — [auto-inferred] Found package.json in project
+- **TypeScript as language** — [auto-inferred] Found tsconfig.json in project
+
+## Entity Graph
+- dependency: 12
+- function: 10
+- module: 7
+- class: 2
+- package: 1
+
+## Type Safety
+- No `as any` — use `as unknown` + type guard or fix the type
+- No blanket `# type: ignore` — use specific error codes
+- No `@ts-ignore` — use `@ts-expect-error` with explanation
+- No `!` non-null assertions without preceding null check
+
+## Error Handling
+- No bare `except:` — use specific exception types
+- No `except Exception: pass` — at minimum, log
+- No empty `.catch(() => {})` — handle or log
+
+## Security
+- No `eval()` / `exec()` in production code
+- No SQL string concatenation — use parameterized queries
+- No `innerHTML =` without sanitization
+
+## Architecture
+- No circular imports
+- No module-level mutable state unless approved in blueprint
+- Hard-to-reverse decisions require human approval first
+- Document hardcoded values with ASSUMPTION markers

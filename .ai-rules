@@ -1,0 +1,40 @@
+# AI Agent Rules (Futurecode)
+
+## Project Memory
+Generated: 2026-02-20 11:02 UTC
+Decisions: 3 active | Rejections: 0 | Entities: 32 tracked
+
+## Active Decisions
+- **Environment variables for config** — [auto-inferred] Found .env in project
+- **Node.js runtime** — [auto-inferred] Found package.json in project
+- **TypeScript as language** — [auto-inferred] Found tsconfig.json in project
+
+## Entity Graph
+- dependency: 12
+- function: 10
+- module: 7
+- class: 2
+- package: 1
+
+If your task conflicts with any decision above, STOP and ask before proceeding.
+
+## Mandatory Rules
+
+Type safety:
+- No `as any`. Use `as unknown` + type guard.
+- No blanket `# type: ignore`. Use `# type: ignore[specific-code]`.
+- No `@ts-ignore`. Use `@ts-expect-error`.
+
+Error handling:
+- No bare `except:`. No `except Exception: pass`. No empty catch blocks.
+- Always log or handle errors.
+
+Security:
+- No `eval()`, `exec()`, `shell=True`, SQL concatenation, `innerHTML =`.
+
+Architecture:
+- No circular imports. No module-level mutable state.
+- Hard-to-reverse decisions → ask human first.
+- Every hardcoded value → ASSUMPTION comment with VALID_UNTIL and RISK_IF_WRONG.
+
+Verification: run `futurecode analyze . --voice=plain` and `futurecode lint .` before committing.
