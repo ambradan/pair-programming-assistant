@@ -79,43 +79,57 @@ export class LLMProvider {
       (!options?.forceModel && isComplexRequest(userMessage, contextSize));
 
     const model = useOpus ? OPUS_MODEL : SONNET_MODEL;
-    const maxTokens = options?.maxTokens ?? 2048;
+    const maxTokens = options?.maxTokens ?? 4096;
 
     const start = Date.now();
+    const MAX_RETRIES = 3;
 
-    try {
-      console.log(`[LLM] Calling ${model}, context size: ${contextSize} chars`);
-      const response = await this.anthropic.messages.create({
-        model,
-        max_tokens: maxTokens,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userMessage }],
-      });
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        console.log(`[LLM] Calling ${model}, attempt ${attempt}/${MAX_RETRIES}, context: ${contextSize} chars`);
+        const response = await this.anthropic.messages.create({
+          model,
+          max_tokens: maxTokens,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userMessage }],
+        });
 
-      const latencyMs = Date.now() - start;
+        const latencyMs = Date.now() - start;
+        const textContent = response.content.find((c) => c.type === "text");
 
-      const textContent = response.content.find((c) => c.type === "text");
+        return {
+          content: textContent?.text ?? "",
+          model,
+          tokensUsed: {
+            input: response.usage.input_tokens,
+            output: response.usage.output_tokens,
+          },
+          latencyMs,
+        };
+      } catch (error: any) {
+        const status = error?.status ?? error?.statusCode;
+        const isRetryable = status === 429 || status === 529 || status === 500 || status === 503;
 
-      return {
-        content: textContent?.text ?? "",
-        model,
-        tokensUsed: {
-          input: response.usage.input_tokens,
-          output: response.usage.output_tokens,
-        },
-        latencyMs,
-      };
-    } catch (error: any) {
-      console.error(`[LLM] Anthropic API error:`, error?.message ?? error);
-      // Fallback to Gemini if configured
-      if (this.config.geminiApiKey) {
-        console.warn(
-          `Anthropic API failed, falling back to Gemini: ${error}`
-        );
-        return this.geminiComplete(systemPrompt, userMessage, maxTokens);
+        console.error(`[LLM] Anthropic attempt ${attempt} failed: ${status ?? error?.message}`);
+
+        if (isRetryable && attempt < MAX_RETRIES) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 8000);
+          console.log(`[LLM] Retrying in ${delay}ms...`);
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
+
+        // All retries exhausted — fall back to Gemini
+        if (this.config.geminiApiKey) {
+          console.warn(`[LLM] All ${MAX_RETRIES} Anthropic attempts failed, falling back to Gemini`);
+          return this.geminiComplete(systemPrompt, userMessage, maxTokens);
+        }
+        throw error;
       }
-      throw error;
     }
+
+    // Should never reach here, but TypeScript needs it
+    throw new Error("LLM call failed: exhausted all attempts");
   }
 
   /**

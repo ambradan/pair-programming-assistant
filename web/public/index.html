@@ -201,8 +201,8 @@
     .empty-state {
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      height: 100%; color: var(--text-secondary);
-      font-size: 14px; gap: 8px;
+      width: 100%; height: 100%; color: var(--text-secondary);
+      font-size: 14px; gap: 8px; text-align: center;
     }
     .empty-state .shortcut {
       font-size: 12px; color: var(--accent);
@@ -324,12 +324,18 @@
 
       <div class="explanation-bar" id="explanationBar" style="display:none;">
         <div class="explanation-box">
-          <h4>&#x1F527; Technical</h4>
+          <h4>&#x1F527; Tecnica</h4>
           <p id="technicalExpl">—</p>
         </div>
         <div class="explanation-box">
-          <h4>&#x1F4A1; Plain English</h4>
+          <h4>&#x1F4A1; Semplice</h4>
           <p id="plainExpl">—</p>
+        </div>
+        <div style="display:flex;align-items:center;flex-shrink:0;">
+          <button class="btn btn-secondary" id="langToggle" onclick="toggleLang()"
+            style="font-size:11px;padding:4px 10px;white-space:nowrap;">
+            &#x1F1EC;&#x1F1E7; English
+          </button>
         </div>
       </div>
     </div>
@@ -339,7 +345,8 @@
     const API_BASE = window.location.origin + '/api';
     let currentResponse = null;
     let currentChangeIndex = 0;
-    let resolvedProjectPath = ''; // actual path used by backend (local or cloned)
+    let resolvedProjectPath = '';
+    let showEnglish = false; // actual path used by backend (local or cloned)
 
     // Keyboard shortcuts
     document.getElementById('messageInput').addEventListener('keydown', (e) => {
@@ -474,6 +481,9 @@
     // --- Reasoning panel ---
     function renderReasoning(data) {
       const panel = document.getElementById('reasoningPanel');
+      const reason = showEnglish
+        ? (data.reasoning.whyThisSolution_en || data.reasoning.whyThisSolution)
+        : data.reasoning.whyThisSolution;
       let html = `
         <div class="reasoning-section">
           <h3>Intent</h3>
@@ -481,17 +491,18 @@
             (confidence: ${(data.intent.confidence * 100).toFixed(0)}%)</p>
         </div>
         <div class="reasoning-section">
-          <h3>Why This Solution</h3>
-          <p>${escapeHtml(data.reasoning.whyThisSolution)}</p>
+          <h3>${showEnglish ? 'Why This Solution' : 'Motivazione'}</h3>
+          <p>${escapeHtml(reason)}</p>
         </div>
       `;
 
       if (data.reasoning.alternatives?.length > 0) {
-        html += '<div class="reasoning-section"><h3>Alternatives Considered</h3>';
+        html += `<div class="reasoning-section"><h3>${showEnglish ? 'Alternatives Considered' : 'Alternative Considerate'}</h3>`;
         for (const alt of data.reasoning.alternatives) {
+          const desc = showEnglish ? (alt.description_en || alt.description) : alt.description;
           html += `
             <div class="alternative">
-              <div class="label">${escapeHtml(alt.description)}</div>
+              <div class="label">${escapeHtml(desc)}</div>
               <div class="why-not">↳ ${escapeHtml(alt.whyNot)}</div>
             </div>
           `;
@@ -549,8 +560,10 @@
         </div>
       `;
 
-      document.getElementById('technicalExpl').textContent = change.explanation.technical;
-      document.getElementById('plainExpl').textContent = change.explanation.plain;
+      document.getElementById('technicalExpl').textContent =
+        showEnglish ? (change.explanation.technical_en || change.explanation.technical) : change.explanation.technical;
+      document.getElementById('plainExpl').textContent =
+        showEnglish ? (change.explanation.plain_en || change.explanation.plain) : change.explanation.plain;
 
       currentChangeIndex = index;
       updateNavigation();
@@ -671,6 +684,21 @@
       return String(str || '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;')
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function toggleLang() {
+      showEnglish = !showEnglish;
+      const btn = document.getElementById('langToggle');
+      btn.innerHTML = showEnglish
+        ? '&#x1F1EE;&#x1F1F9; Italiano'
+        : '&#x1F1EC;&#x1F1E7; English';
+      // Re-render with new language
+      if (currentResponse) {
+        renderReasoning(currentResponse);
+        if (currentResponse.changes.length > 0) {
+          renderChange(currentChangeIndex);
+        }
+      }
     }
   </script>
 </body>
