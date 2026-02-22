@@ -8,12 +8,12 @@ import {
   ProjectMap,
   serializeMapForLLM,
 } from "../indexer/project-map.js";
-import { LLMProvider } from "../llm/provider.js";
+import { LLMProvider, ModelTier } from "../llm/provider.js";
 
 export interface AssistRequest {
   message: string;
   projectPath: string;
-  forceModel?: "sonnet" | "opus";
+  forceModel?: ModelTier;
 }
 
 export interface CodeChange {

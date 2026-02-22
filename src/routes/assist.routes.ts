@@ -62,8 +62,9 @@ async function getOrCreateIndex(projectPath: string): Promise<{
 
 export async function assistRoutes(fastify: FastifyInstance) {
   const llm = new LLMProvider({
-    anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
-    geminiApiKey: process.env.GEMINI_API_KEY,
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+    nebiusApiKey:    process.env.NEBIUS_API_KEY,
+    geminiApiKey:    process.env.GEMINI_API_KEY,
   });
 
   /**
@@ -205,8 +206,7 @@ export async function assistRoutes(fastify: FastifyInstance) {
     return {
       status: "ok",
       timestamp: new Date().toISOString(),
-      anthropicConfigured: !!process.env.ANTHROPIC_API_KEY,
-      geminiConfigured: !!process.env.GEMINI_API_KEY,
+      providers: llm.backends,
       indexedProjects: projects,
     };
   });

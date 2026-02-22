@@ -96,7 +96,7 @@
       background: var(--bg-tertiary); color: var(--text-secondary);
       border: 1px solid var(--border);
     }
-    .btn-opus { background: var(--yellow); color: var(--bg-primary); }
+    .btn-power { background: var(--yellow); color: var(--bg-primary); }
     .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
     .model-indicator {
@@ -269,8 +269,8 @@
           <button class="btn btn-primary" id="sendBtn" onclick="sendAssist()">
             Send (Ctrl+Enter)
           </button>
-          <button class="btn btn-opus" id="opusBtn" onclick="sendAssist('opus')" title="Force Opus for complex requests">
-            &#x26A1; Opus
+          <button class="btn btn-power" id="powerBtn" onclick="sendAssist('power')" title="Force power tier for complex requests">
+            &#x26A1; Power
           </button>
           <button class="btn btn-secondary" id="reindexBtn" onclick="reindexProject()">
             &#x1F504; Re-index
@@ -421,8 +421,9 @@
         const res = await fetch(`${API_BASE}/status`);
         const data = await res.json();
         document.getElementById('apiStatus').className = 'status-dot connected';
+        const providerList = (data.providers ?? []).join(', ') || 'none';
         document.getElementById('apiStatusText').textContent =
-          `API OK | Anthropic: ${data.anthropicConfigured ? '✔' : '✗'}`;
+          `API OK | providers: ${providerList}`;
       } catch {
         document.getElementById('apiStatus').className = 'status-dot disconnected';
         document.getElementById('apiStatusText').textContent = 'API Offline';
