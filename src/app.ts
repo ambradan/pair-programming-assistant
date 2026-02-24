@@ -4,6 +4,7 @@ import fastifyStatic from "@fastify/static";
 import path from "path";
 import { fileURLToPath } from "url";
 import { assistRoutes } from "./routes/assist.routes.js";
+import { loopRoutes } from "./routes/loop.routes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -31,6 +32,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // API routes
   await app.register(assistRoutes, { prefix: "/api" });
+  await app.register(loopRoutes, { prefix: "/api/loop" });
 
   return app;
 }

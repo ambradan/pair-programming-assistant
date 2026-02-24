@@ -49,6 +49,7 @@ export interface AssistResponse {
   };
   model: string;
   latencyMs: number;
+  tokensUsed: { input: number; output: number };
   navigationOrder: string[];
 }
 
@@ -143,6 +144,7 @@ export class AssistService {
       reasoning: parsed.reasoning,
       model: llmResponse.model,
       latencyMs: Date.now() - startTime,
+      tokensUsed: llmResponse.tokensUsed,
       navigationOrder,
     };
   }

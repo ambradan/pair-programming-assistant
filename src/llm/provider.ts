@@ -272,15 +272,19 @@ export class LLMProvider {
     );
 
     const data = (await response.json()) as Record<string, unknown>;
-    const candidates = data.candidates as Array<Record<string, unknown>> | undefined;
-    const content    = candidates?.[0]?.content as Record<string, unknown> | undefined;
-    const parts      = content?.parts as Array<Record<string, unknown>> | undefined;
-    const text       = (parts?.[0]?.text as string) ?? "Gemini returned no content";
+    const candidates  = data.candidates as Array<Record<string, unknown>> | undefined;
+    const content     = candidates?.[0]?.content as Record<string, unknown> | undefined;
+    const parts       = content?.parts as Array<Record<string, unknown>> | undefined;
+    const text        = (parts?.[0]?.text as string) ?? "Gemini returned no content";
+    const usage       = data.usageMetadata as Record<string, unknown> | undefined;
 
     return {
       content: text,
       model,
-      tokensUsed: { input: 0, output: 0 }, // Gemini doesn't report this the same way
+      tokensUsed: {
+        input:  (usage?.promptTokenCount     as number) ?? 0,
+        output: (usage?.candidatesTokenCount as number) ?? 0,
+      },
       latencyMs: Date.now() - start,
     };
   }

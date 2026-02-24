@@ -246,6 +246,157 @@
       font-family: monospace; font-size: 12px;
     }
     .dep-link:hover { text-decoration: underline; }
+
+    /* --- Mode toggle --- */
+    .mode-toggle {
+      display: flex; gap: 4px; padding: 8px 12px 0;
+    }
+    .mode-btn {
+      padding: 4px 12px; border: 1px solid var(--border);
+      border-radius: 4px; font-size: 11px; font-weight: 600;
+      cursor: pointer; background: var(--bg-tertiary);
+      color: var(--text-secondary); text-transform: uppercase;
+      letter-spacing: 0.5px; transition: all 0.15s;
+    }
+    .mode-btn.active {
+      background: var(--accent); color: var(--bg-primary);
+      border-color: var(--accent);
+    }
+    .mode-btn:not(.active):hover { border-color: var(--accent); color: var(--accent); }
+
+    /* --- Ralph mode panels --- */
+    #ralphPanel { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+    #normalInputArea { }
+
+    .ralph-section {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .ralph-section-label {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--accent); margin-bottom: 6px; font-weight: 600;
+    }
+
+    /* Task list */
+    .task-list { display: flex; flex-direction: column; gap: 3px; }
+    .task-item {
+      display: flex; align-items: center; gap: 6px;
+      padding: 5px 6px; border-radius: 4px;
+      border: 1px solid transparent;
+      transition: background 0.1s;
+    }
+    .task-item:hover { background: var(--bg-tertiary); }
+    .task-item.complete .task-text { text-decoration: line-through; color: var(--text-secondary); opacity: 0.6; }
+    .task-item.active { border-color: var(--accent); background: rgba(137,180,250,0.06); }
+    .task-item.blocked { border-color: var(--yellow); background: rgba(249,226,175,0.06); }
+    .task-checkbox {
+      width: 14px; height: 14px; flex-shrink: 0;
+      border: 1.5px solid var(--border); border-radius: 3px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; color: var(--green);
+    }
+    .task-checkbox.done { background: rgba(166,227,161,0.15); border-color: var(--green); }
+    .task-text {
+      flex: 1; font-size: 12px; color: var(--text-primary);
+      line-height: 1.3;
+    }
+    .task-text[contenteditable="true"] {
+      outline: none; border-bottom: 1px dashed var(--accent);
+      padding-bottom: 1px; cursor: text;
+    }
+    .task-remove {
+      opacity: 0; cursor: pointer; color: var(--red);
+      font-size: 13px; line-height: 1; padding: 0 2px;
+      transition: opacity 0.1s;
+    }
+    .task-item:hover .task-remove { opacity: 0.6; }
+    .task-remove:hover { opacity: 1 !important; }
+    .add-task-btn {
+      margin-top: 4px; background: none; border: 1px dashed var(--border);
+      color: var(--text-secondary); font-size: 11px; cursor: pointer;
+      padding: 4px 8px; border-radius: 3px; width: 100%; text-align: left;
+      transition: all 0.15s;
+    }
+    .add-task-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Ralph controls */
+    .ralph-controls {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .ralph-check { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-secondary); cursor: pointer; }
+    .ralph-check input { cursor: pointer; }
+    .ralph-iters { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-secondary); }
+    .ralph-iters input {
+      width: 40px; padding: 2px 4px; background: var(--bg-tertiary);
+      border: 1px solid var(--border); border-radius: 3px;
+      color: var(--text-primary); font-size: 11px; text-align: center;
+    }
+
+    /* Ralph status bar */
+    .ralph-status-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 12px; background: var(--bg-tertiary);
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      font-size: 11px;
+    }
+    .ralph-badge {
+      padding: 2px 7px; border-radius: 3px; font-size: 10px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .ralph-badge.idle    { background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
+    .ralph-badge.running { background: rgba(137,180,250,0.2); color: var(--accent); border: 1px solid rgba(137,180,250,0.4); }
+    .ralph-badge.paused  { background: rgba(249,226,175,0.2); color: var(--yellow); border: 1px solid rgba(249,226,175,0.4); }
+    .ralph-badge.completed { background: rgba(166,227,161,0.2); color: var(--green); border: 1px solid rgba(166,227,161,0.4); }
+    .ralph-badge.failed  { background: rgba(243,139,168,0.2); color: var(--red); border: 1px solid rgba(243,139,168,0.4); }
+    .ralph-cost { margin-left: auto; color: var(--yellow); font-family: monospace; }
+
+    /* Iteration log */
+    .iteration-log {
+      flex: 1; overflow-y: auto; padding: 8px 0;
+    }
+    .iter-entry {
+      border-bottom: 1px solid var(--border); cursor: pointer;
+      transition: background 0.1s;
+    }
+    .iter-entry:hover { background: var(--bg-tertiary); }
+    .iter-header {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 12px; font-size: 11px;
+    }
+    .iter-num {
+      font-family: monospace; color: var(--text-secondary);
+      font-size: 10px; flex-shrink: 0; min-width: 22px;
+    }
+    .iter-task { flex: 1; color: var(--text-primary); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .iter-badge {
+      flex-shrink: 0; padding: 1px 5px; border-radius: 3px;
+      font-size: 9px; font-weight: 700; text-transform: uppercase;
+    }
+    .iter-badge.done    { background: rgba(166,227,161,0.2); color: var(--green); }
+    .iter-badge.blocked { background: rgba(249,226,175,0.2); color: var(--yellow); }
+    .iter-badge.failed  { background: rgba(243,139,168,0.2); color: var(--red); }
+    .iter-badge.skipped { background: rgba(166,173,200,0.2); color: var(--text-secondary); }
+    .iter-duration { font-family: monospace; color: var(--text-secondary); font-size: 10px; flex-shrink: 0; }
+
+    /* Decision buttons (shown when paused) */
+    .iter-decision {
+      display: flex; gap: 6px; padding: 6px 12px 8px;
+    }
+    .decision-btn {
+      padding: 4px 10px; border: none; border-radius: 3px;
+      font-size: 11px; font-weight: 600; cursor: pointer; transition: opacity 0.15s;
+    }
+    .decision-btn:hover { opacity: 0.85; }
+    .decision-accept { background: var(--green);  color: var(--bg-primary); }
+    .decision-retry  { background: var(--yellow); color: var(--bg-primary); }
+    .decision-skip   { background: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--border); }
+    .decision-stop   { background: var(--red);    color: var(--bg-primary); }
+
+    /* Decompose loading state */
+    .decompose-loading {
+      font-size: 12px; color: var(--text-secondary);
+      padding: 8px 0; display: flex; align-items: center; gap: 6px;
+    }
   </style>
 </head>
 <body>
@@ -260,7 +411,14 @@
 
   <div class="main">
     <div class="left-panel">
-      <div class="input-area">
+      <!-- Mode toggle -->
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="modeNormal" onclick="setMode('normal')">Normal</button>
+        <button class="mode-btn" id="modeRalph" onclick="setMode('ralph')">&#x1F501; Ralph</button>
+      </div>
+
+      <!-- Normal mode input area -->
+      <div class="input-area" id="normalInputArea">
         <textarea
           id="messageInput"
           placeholder="Describe what you need...&#10;&#10;e.g. 'add input validation to the booking endpoint'"
@@ -291,6 +449,7 @@
         </div>
       </div>
 
+      <!-- Normal mode reasoning panel -->
       <div class="reasoning-panel" id="reasoningPanel">
         <div class="empty-state">
           <div>Type a request and press <span class="shortcut">Ctrl+Enter</span></div>
@@ -299,6 +458,78 @@
           </div>
         </div>
       </div>
+
+      <!-- Ralph mode panel (hidden by default) -->
+      <div id="ralphPanel">
+
+        <!-- Prompt input row -->
+        <div class="ralph-section">
+          <div class="ralph-section-label">What should Ralph build?</div>
+          <textarea
+            id="ralphPrompt"
+            style="width:100%;height:60px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:8px;font-size:13px;font-family:inherit;resize:none;"
+            placeholder="e.g. 'Refactor the auth module to use JWT with rate limiting'"
+          ></textarea>
+          <div style="display:flex;gap:6px;margin-top:6px;align-items:center;">
+            <button class="btn btn-primary" id="decomposeBtn" onclick="ralphDecompose()" style="padding:5px 12px;">
+              &#x26A1; Decompose
+            </button>
+            <div id="decomposeStatus" style="font-size:11px;color:var(--text-secondary);"></div>
+          </div>
+        </div>
+
+        <!-- Task list -->
+        <div class="ralph-section" style="flex:none;max-height:220px;overflow-y:auto;">
+          <div class="ralph-section-label">
+            Tasks
+            <span id="taskCount" style="color:var(--text-secondary);font-weight:400;margin-left:6px;"></span>
+          </div>
+          <div class="task-list" id="taskList">
+            <div style="font-size:12px;color:var(--text-secondary);padding:4px 0;">
+              Decompose a prompt above, or type tasks manually below.
+            </div>
+          </div>
+          <button class="add-task-btn" onclick="ralphAddTask()">+ Add task</button>
+        </div>
+
+        <!-- Controls -->
+        <div class="ralph-section" style="flex:none;">
+          <div class="ralph-controls">
+            <button class="btn btn-primary" id="ralphRunBtn" onclick="ralphRun()" style="padding:5px 14px;">
+              &#x25BA; Run
+            </button>
+            <button class="btn" id="ralphStopBtn" onclick="ralphStop()"
+              style="display:none;background:var(--red);color:var(--bg-primary);padding:5px 12px;">
+              &#x25A0; Stop
+            </button>
+            <label class="ralph-check">
+              <input type="checkbox" id="ralphAutoPilot"> Auto-pilot
+            </label>
+            <label class="ralph-check">
+              <input type="checkbox" id="ralphAutoCommit"> Commit
+            </label>
+            <div class="ralph-iters">
+              <span>Iters:</span>
+              <input type="number" id="ralphMaxIters" value="20" min="1" max="100">
+            </div>
+          </div>
+        </div>
+
+        <!-- Status bar -->
+        <div class="ralph-status-bar">
+          <span class="ralph-badge idle" id="ralphBadge">Idle</span>
+          <span id="ralphStatusText" style="color:var(--text-secondary);">Ready</span>
+          <span class="ralph-cost" id="ralphCost"></span>
+        </div>
+
+        <!-- Iteration log -->
+        <div class="iteration-log" id="iterationLog">
+          <div style="padding:16px;text-align:center;color:var(--text-secondary);font-size:12px;">
+            Iterations will appear here as Ralph works.
+          </div>
+        </div>
+
+      </div><!-- /ralphPanel -->
     </div>
 
     <div class="right-panel">
@@ -701,6 +932,437 @@
         }
       }
     }
+
+    // =========================================================================
+    // RALPH MODE
+    // =========================================================================
+
+    let currentMode = 'normal';
+    let ralphSessionId = null;
+    let ralphEventSource = null;
+    let ralphTasks = []; // { text, complete, id }
+    let ralphTotalCost = 0;
+    let ralphPausedIteration = null; // iteration number currently paused for review
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.getElementById('modeNormal').classList.toggle('active', mode === 'normal');
+      document.getElementById('modeRalph').classList.toggle('active', mode === 'ralph');
+      document.getElementById('normalInputArea').style.display = mode === 'normal' ? '' : 'none';
+      document.getElementById('reasoningPanel').style.display = mode === 'normal' ? '' : 'none';
+      document.getElementById('ralphPanel').style.display = mode === 'ralph' ? 'flex' : 'none';
+    }
+
+    // --- Task list management ---
+
+    function ralphRenderTasks() {
+      const list = document.getElementById('taskList');
+      const count = document.getElementById('taskCount');
+
+      if (ralphTasks.length === 0) {
+        list.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);padding:4px 0;">Decompose a prompt above, or type tasks manually below.</div>';
+        count.textContent = '';
+        return;
+      }
+
+      const done = ralphTasks.filter(t => t.complete).length;
+      count.textContent = `${done}/${ralphTasks.length}`;
+
+      list.innerHTML = ralphTasks.map((task, i) => `
+        <div class="task-item ${task.complete ? 'complete' : ''}" data-idx="${i}">
+          <div class="task-checkbox ${task.complete ? 'done' : ''}">
+            ${task.complete ? '&#x2713;' : ''}
+          </div>
+          <div class="task-text" contenteditable="${ralphSessionId ? 'false' : 'true'}"
+            onblur="ralphUpdateTaskText(${i}, this.textContent)"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+          >${escapeHtml(task.text)}</div>
+          ${ralphSessionId ? '' : `<span class="task-remove" onclick="ralphRemoveTask(${i})" title="Remove">&#x2715;</span>`}
+        </div>
+      `).join('');
+    }
+
+    function ralphAddTask() {
+      ralphTasks.push({ text: 'New task', complete: false, id: Date.now() });
+      ralphRenderTasks();
+      // Focus the new task for immediate editing
+      const items = document.querySelectorAll('#taskList .task-text');
+      const last = items[items.length - 1];
+      if (last) { last.focus(); document.execCommand('selectAll'); }
+    }
+
+    function ralphRemoveTask(i) {
+      ralphTasks.splice(i, 1);
+      ralphRenderTasks();
+    }
+
+    function ralphUpdateTaskText(i, text) {
+      const trimmed = text.trim();
+      if (trimmed) {
+        ralphTasks[i].text = trimmed;
+      } else {
+        ralphTasks.splice(i, 1);
+      }
+      ralphRenderTasks();
+    }
+
+    // --- Decompose ---
+
+    async function ralphDecompose() {
+      const message = document.getElementById('ralphPrompt').value.trim();
+      const projectPath = document.getElementById('projectPath').value.trim();
+
+      if (!message) { document.getElementById('ralphPrompt').focus(); return; }
+      if (!projectPath) { alert('Set the project path first.'); return; }
+
+      const btn = document.getElementById('decomposeBtn');
+      const status = document.getElementById('decomposeStatus');
+      btn.disabled = true;
+      btn.textContent = '⏳ Decomposing...';
+      status.textContent = '';
+
+      try {
+        const resolvedPath = await resolveProjectPath();
+        const res = await fetch(`${API_BASE}/loop/decompose`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, projectPath: resolvedPath }),
+        });
+        const json = await res.json();
+        if (!res.ok || json.error) throw new Error(json.message || json.error);
+
+        ralphTasks = json.data.tasks.map((t, i) => ({ text: t.text, complete: t.complete, id: i }));
+        ralphRenderTasks();
+
+        const warn = json.data.warnings?.length;
+        status.textContent = warn ? `⚠ ${warn} validation warning${warn > 1 ? 's' : ''}` : `✓ ${ralphTasks.length} tasks`;
+      } catch (err) {
+        status.textContent = `Error: ${err.message}`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '⚡ Decompose';
+      }
+    }
+
+    // Build PRD markdown from current task list
+    function ralphBuildPrd() {
+      return ralphTasks.map(t => `- [${t.complete ? 'x' : ' '}] ${t.text}`).join('\n');
+    }
+
+    // --- Run ---
+
+    async function ralphRun() {
+      if (ralphTasks.filter(t => !t.complete).length === 0) {
+        alert('No incomplete tasks. Add tasks or decompose a prompt first.');
+        return;
+      }
+
+      const projectPath = document.getElementById('projectPath').value.trim();
+      if (!projectPath) { alert('Set the project path first.'); return; }
+
+      try {
+        const resolvedPath = await resolveProjectPath();
+        const prdContent = ralphBuildPrd();
+        const autoPilot = document.getElementById('ralphAutoPilot').checked;
+        const autoCommit = document.getElementById('ralphAutoCommit').checked;
+        const maxIterations = parseInt(document.getElementById('ralphMaxIters').value, 10) || 20;
+
+        const res = await fetch(`${API_BASE}/loop/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prdContent,
+            projectPath: resolvedPath,
+            maxIterations,
+            autoApply: true,
+            autoCommit,
+            autoPilot,
+          }),
+        });
+        const json = await res.json();
+        if (!res.ok || json.error) throw new Error(json.message || json.error);
+
+        ralphSessionId = json.data.sessionId;
+        ralphTotalCost = 0;
+        ralphPausedIteration = null;
+
+        ralphSetStatus('running', 'Running…');
+        document.getElementById('ralphRunBtn').style.display = 'none';
+        document.getElementById('ralphStopBtn').style.display = '';
+        document.getElementById('iterationLog').innerHTML = '';
+
+        ralphConnectSSE(ralphSessionId);
+      } catch (err) {
+        alert(`Ralph failed to start: ${err.message}`);
+      }
+    }
+
+    function ralphConnectSSE(sessionId) {
+      if (ralphEventSource) { ralphEventSource.close(); ralphEventSource = null; }
+
+      ralphEventSource = new EventSource(`${API_BASE}/loop/events/${sessionId}`);
+      ralphEventSource.onmessage = (e) => {
+        try { ralphHandleEvent(JSON.parse(e.data)); } catch { /* ignore malformed */ }
+      };
+      ralphEventSource.onerror = () => {
+        // SSE may close naturally when session ends — check status
+        setTimeout(() => ralphSyncStatus(), 1000);
+      };
+    }
+
+    function ralphHandleEvent(event) {
+      switch (event.type) {
+
+        case 'iteration:start':
+          ralphSetStatus('running', `Iteration ${event.iteration}: ${event.task.slice(0, 50)}…`);
+          ralphAppendIterEntry(event.iteration, event.task, 'running', null);
+          break;
+
+        case 'iteration:paused': {
+          ralphPausedIteration = event.iteration;
+          ralphSetStatus('paused', `Review iteration ${event.iteration}`);
+          ralphMarkIterEntry(event.iteration, 'paused');
+          // Load result into diff viewer
+          if (event.result && event.result.changes?.length > 0) {
+            currentResponse = event.result;
+            currentChangeIndex = 0;
+            document.getElementById('navBar').style.display = 'flex';
+            document.getElementById('explanationBar').style.display = 'flex';
+            renderChange(0);
+            updateNavigation();
+          }
+          // Show decision buttons on the iteration entry
+          ralphShowDecisionButtons(event.iteration);
+          break;
+        }
+
+        case 'iteration:end':
+          ralphPausedIteration = null;
+          ralphMarkIterDone(event.iteration, event.decision, event.success, event.appliedFiles, event.durationMs);
+          // Update task checkmarks
+          ralphSyncTasksFromStatus();
+          break;
+
+        case 'task:blocked':
+          ralphMarkIterEntry(event.iteration, 'blocked');
+          break;
+
+        case 'commit:done':
+          ralphAppendCommitNote(event.iteration, event.hash, event.message);
+          break;
+
+        case 'commit:failed':
+          ralphAppendCommitNote(event.iteration, null, `⚠ Commit failed: ${event.error}`);
+          break;
+
+        case 'cost:update':
+          ralphTotalCost = event.totalCost;
+          document.getElementById('ralphCost').textContent = `$${ralphTotalCost.toFixed(4)}`;
+          break;
+
+        case 'loop:end':
+          ralphOnEnd(event.reason);
+          break;
+      }
+    }
+
+    // --- Decision buttons (human-in-the-loop) ---
+
+    function ralphShowDecisionButtons(iteration) {
+      const entry = document.querySelector(`.iter-entry[data-iter="${iteration}"]`);
+      if (!entry) return;
+
+      // Remove any existing decision row
+      const existing = entry.querySelector('.iter-decision');
+      if (existing) existing.remove();
+
+      const div = document.createElement('div');
+      div.className = 'iter-decision';
+      div.innerHTML = `
+        <button class="decision-btn decision-accept" onclick="ralphDecide('accept')">&#x2713; Accept</button>
+        <button class="decision-btn decision-retry"  onclick="ralphDecide('retry')">&#x21BA; Retry</button>
+        <button class="decision-btn decision-skip"   onclick="ralphDecide('skip')">&#x21E5; Skip</button>
+        <button class="decision-btn decision-stop"   onclick="ralphDecide('stop')">&#x25A0; Stop</button>
+      `;
+      entry.appendChild(div);
+      entry.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    async function ralphDecide(decision) {
+      if (!ralphSessionId) return;
+      try {
+        const res = await fetch(`${API_BASE}/loop/decide/${ralphSessionId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ decision }),
+        });
+        if (!res.ok) {
+          const j = await res.json();
+          throw new Error(j.error || `HTTP ${res.status}`);
+        }
+        // Remove decision buttons from the entry
+        if (ralphPausedIteration !== null) {
+          const entry = document.querySelector(`.iter-entry[data-iter="${ralphPausedIteration}"]`);
+          entry?.querySelector('.iter-decision')?.remove();
+          ralphMarkIterEntry(ralphPausedIteration, 'decided');
+        }
+      } catch (err) {
+        alert(`Decision failed: ${err.message}`);
+      }
+    }
+
+    // --- Stop ---
+
+    async function ralphStop() {
+      if (!ralphSessionId) return;
+      try {
+        await fetch(`${API_BASE}/loop/cancel/${ralphSessionId}`, { method: 'POST' });
+      } catch { /* ignore — SSE will signal the end */ }
+    }
+
+    // --- Iteration log helpers ---
+
+    function ralphAppendIterEntry(iteration, task, status, durationMs) {
+      const log = document.getElementById('iterationLog');
+      // Clear placeholder
+      if (log.querySelector('div[style]')) log.innerHTML = '';
+
+      const div = document.createElement('div');
+      div.className = 'iter-entry';
+      div.dataset.iter = iteration;
+      div.innerHTML = `
+        <div class="iter-header" onclick="ralphLoadIteration(${iteration})">
+          <span class="iter-num">#${iteration}</span>
+          <span class="iter-task" title="${escapeHtml(task)}">${escapeHtml(task)}</span>
+          <span class="iter-badge ${status}" id="iter-badge-${iteration}">${status === 'running' ? '…' : status}</span>
+          <span class="iter-duration" id="iter-dur-${iteration}">${durationMs != null ? (durationMs / 1000).toFixed(1) + 's' : ''}</span>
+        </div>
+      `;
+      log.appendChild(div);
+      div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function ralphMarkIterEntry(iteration, status) {
+      const badge = document.getElementById(`iter-badge-${iteration}`);
+      if (!badge) return;
+      badge.className = `iter-badge ${status}`;
+      badge.textContent = status;
+    }
+
+    function ralphMarkIterDone(iteration, decision, success, appliedFiles, durationMs) {
+      const dur = document.getElementById(`iter-dur-${iteration}`);
+      if (dur && durationMs) dur.textContent = (durationMs / 1000).toFixed(1) + 's';
+
+      let badgeClass, badgeText;
+      if (!success)              { badgeClass = 'failed';  badgeText = 'failed'; }
+      else if (decision === 'skip') { badgeClass = 'skipped'; badgeText = 'skipped'; }
+      else                       { badgeClass = 'done';    badgeText = 'done'; }
+
+      ralphMarkIterEntry(iteration, badgeClass);
+      const badge = document.getElementById(`iter-badge-${iteration}`);
+      if (badge) badge.textContent = badgeText;
+
+      // Show applied files inline
+      if (appliedFiles?.length > 0) {
+        const entry = document.querySelector(`.iter-entry[data-iter="${iteration}"]`);
+        if (entry) {
+          const files = document.createElement('div');
+          files.style.cssText = 'padding:0 12px 6px;display:flex;gap:4px;flex-wrap:wrap;';
+          files.innerHTML = appliedFiles.map(f =>
+            `<span style="font-family:monospace;font-size:10px;color:var(--accent);background:var(--code-bg);padding:1px 5px;border-radius:2px;">${escapeHtml(f)}</span>`
+          ).join('');
+          entry.appendChild(files);
+        }
+      }
+    }
+
+    function ralphAppendCommitNote(iteration, hash, message) {
+      const entry = document.querySelector(`.iter-entry[data-iter="${iteration}"]`);
+      if (!entry) return;
+      const note = document.createElement('div');
+      note.style.cssText = 'padding:2px 12px 6px;font-size:10px;color:var(--green);font-family:monospace;';
+      note.textContent = hash ? `git:${hash.slice(0,7)} — ${message}` : message;
+      entry.appendChild(note);
+    }
+
+    function ralphLoadIteration(iteration) {
+      if (!ralphSessionId) return;
+      // Load full iteration data from status (iterations array includes assistResponse for paused state,
+      // but for completed ones we fetch the session and find the matching result)
+      fetch(`${API_BASE}/loop/status/${ralphSessionId}`)
+        .then(r => r.json())
+        .then(json => {
+          const iter = json.data?.iterations?.find(i => i.iteration === iteration);
+          if (iter?.assistResponse?.changes?.length > 0) {
+            currentResponse = iter.assistResponse;
+            currentChangeIndex = 0;
+            document.getElementById('navBar').style.display = 'flex';
+            document.getElementById('explanationBar').style.display = 'flex';
+            renderChange(0);
+            updateNavigation();
+            renderReasoning(iter.assistResponse);
+          }
+        })
+        .catch(() => { /* ignore */ });
+    }
+
+    // --- Sync task completion from server state ---
+
+    async function ralphSyncTasksFromStatus() {
+      if (!ralphSessionId) return;
+      try {
+        const res = await fetch(`${API_BASE}/loop/status/${ralphSessionId}`);
+        const json = await res.json();
+        if (!json.data?.tasks) return;
+        json.data.tasks.forEach((serverTask, i) => {
+          if (ralphTasks[i]) ralphTasks[i].complete = serverTask.complete;
+        });
+        ralphRenderTasks();
+      } catch { /* ignore */ }
+    }
+
+    function ralphOnEnd(reason) {
+      const messages = {
+        complete:       '&#x2713; All tasks complete',
+        stopped:        'Stopped by user',
+        max_iterations: 'Reached max iterations',
+        cost_limit:     'Cost limit reached',
+        cancelled:      'Cancelled',
+        failed:         'Loop failed',
+      };
+      ralphSetStatus(reason === 'complete' ? 'completed' : reason === 'failed' ? 'failed' : 'idle',
+        messages[reason] || reason);
+      document.getElementById('ralphRunBtn').style.display = '';
+      document.getElementById('ralphStopBtn').style.display = 'none';
+      if (ralphEventSource) { ralphEventSource.close(); ralphEventSource = null; }
+      ralphSessionId = null;
+      ralphSyncTasksFromStatus();
+    }
+
+    function ralphSetStatus(status, text) {
+      const badge = document.getElementById('ralphBadge');
+      badge.className = `ralph-badge ${status}`;
+      badge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+      document.getElementById('ralphStatusText').textContent = text;
+    }
+
+    async function ralphSyncStatus() {
+      if (!ralphSessionId) return;
+      try {
+        const res = await fetch(`${API_BASE}/loop/status/${ralphSessionId}`);
+        const json = await res.json();
+        if (!json.data) return;
+        const { status, currentIteration } = json.data;
+        if (['completed', 'failed', 'cancelled'].includes(status)) {
+          ralphOnEnd(status === 'completed' ? 'complete' : status);
+        }
+      } catch { /* ignore */ }
+    }
+
+    // Keyboard: Ctrl+Enter in ralph prompt triggers decompose
+    document.getElementById('ralphPrompt')?.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); ralphDecompose(); }
+    });
   </script>
 </body>
 </html>
