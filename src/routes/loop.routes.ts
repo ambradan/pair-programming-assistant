@@ -117,11 +117,20 @@ export async function loopRoutes(fastify: FastifyInstance): Promise<void> {
       try {
         const { map } = await getOrCreateIndex(projectPath);
         const projectContext = serializeMapForLLM(map);
-        const prdContent = await decompose(llm, message, projectContext);
-        const tasks = parseTasks(prdContent);
-        const warnings = validatePrd(prdContent);
+        const result = await decompose(llm, message, projectContext);
+        const tasks = parseTasks(result.prdContent);
+        const warnings = validatePrd(result.prdContent);
 
-        return { data: { prdContent, tasks, warnings } };
+        return {
+          data: {
+            prdContent: result.prdContent,
+            tasks,
+            warnings,
+            model: result.model,
+            latencyMs: result.latencyMs,
+            tokensUsed: result.tokensUsed,
+          },
+        };
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         fastify.log.error(err, "Decompose failed");
@@ -226,12 +235,15 @@ export async function loopRoutes(fastify: FastifyInstance): Promise<void> {
         return reply.status(404).send({ error: "Session not found" });
       }
 
+      // Take over the raw socket — Fastify must not touch it after this
+      reply.hijack();
+
       const res = reply.raw;
       res.writeHead(200, {
         "Content-Type":  "text/event-stream",
         "Cache-Control": "no-cache",
         "Connection":    "keep-alive",
-        "X-Accel-Buffering": "no", // disable nginx buffering if present
+        "X-Accel-Buffering": "no",
       });
 
       // Replay buffered events for late joiners
@@ -239,14 +251,14 @@ export async function loopRoutes(fastify: FastifyInstance): Promise<void> {
         res.write(`data: ${JSON.stringify(event)}\n\n`);
       }
 
-      // If the session is already done, close immediately after replay
+      // If the session is already done, close after replay
       const terminalStatuses = ["completed", "failed", "cancelled"];
       if (terminalStatuses.includes(entry.session.status)) {
         res.end();
-        return reply;
+        return;
       }
 
-      // Register as a subscriber
+      // Register as a subscriber for live events
       entry.subscribers.add(res);
 
       // Keepalive ping every 15s to prevent proxy timeouts
@@ -258,8 +270,6 @@ export async function loopRoutes(fastify: FastifyInstance): Promise<void> {
         clearInterval(keepalive);
         entry.subscribers.delete(res);
       });
-
-      return reply;
     }
   );
 

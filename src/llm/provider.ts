@@ -24,6 +24,8 @@ export interface LLMConfig {
   anthropicApiKey?: string;
   nebiusApiKey?: string;
   geminiApiKey?: string;
+  modelName?: string;
+  providerType?: "anthropic" | "nebius" | "gemini";
 }
 
 export type ModelTier = "fast" | "power";

@@ -378,24 +378,29 @@
     .iter-badge.skipped { background: rgba(166,173,200,0.2); color: var(--text-secondary); }
     .iter-duration { font-family: monospace; color: var(--text-secondary); font-size: 10px; flex-shrink: 0; }
 
-    /* Decision buttons (shown when paused) */
-    .iter-decision {
-      display: flex; gap: 6px; padding: 6px 12px 8px;
-    }
-    .decision-btn {
-      padding: 4px 10px; border: none; border-radius: 3px;
-      font-size: 11px; font-weight: 600; cursor: pointer; transition: opacity 0.15s;
-    }
-    .decision-btn:hover { opacity: 0.85; }
-    .decision-accept { background: var(--green);  color: var(--bg-primary); }
-    .decision-retry  { background: var(--yellow); color: var(--bg-primary); }
-    .decision-skip   { background: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--border); }
-    .decision-stop   { background: var(--red);    color: var(--bg-primary); }
+    /* (Decision buttons moved to nav bar — see Ralph loop controls) */
 
-    /* Decompose loading state */
-    .decompose-loading {
-      font-size: 12px; color: var(--text-secondary);
-      padding: 8px 0; display: flex; align-items: center; gap: 6px;
+    /* Small inline spinner for Ralph's tight UI */
+    .spinner-sm {
+      width: 12px; height: 12px; flex-shrink: 0;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+
+    /* Pulsing dot on the active task in the list */
+    .task-item.working .task-checkbox {
+      border-color: var(--accent);
+    }
+    .task-item.working .task-checkbox::after {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--accent); border-radius: 50%;
+      animation: pulse 1s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.6); }
     }
   </style>
 </head>
@@ -474,7 +479,10 @@
             <button class="btn btn-primary" id="decomposeBtn" onclick="ralphDecompose()" style="padding:5px 12px;">
               &#x26A1; Decompose
             </button>
+            <span id="decomposeSpinner" class="spinner-sm" style="display:none;"></span>
             <div id="decomposeStatus" style="font-size:11px;color:var(--text-secondary);"></div>
+          </div>
+          <div id="decomposeReasoning" style="display:none;margin-top:8px;padding:8px;background:var(--bg-tertiary);border-radius:4px;font-size:11px;color:var(--text-secondary);line-height:1.5;">
           </div>
         </div>
 
@@ -518,6 +526,7 @@
         <!-- Status bar -->
         <div class="ralph-status-bar">
           <span class="ralph-badge idle" id="ralphBadge">Idle</span>
+          <span id="ralphLoopSpinner" class="spinner-sm" style="display:none;"></span>
           <span id="ralphStatusText" style="color:var(--text-secondary);">Ready</span>
           <span class="ralph-cost" id="ralphCost"></span>
         </div>
@@ -543,6 +552,10 @@
           <button class="nav-btn" id="applyBtn" onclick="applyChange(currentChangeIndex)" style="background:var(--green);color:var(--bg-primary)">&#x2713; Apply</button>
           <button class="nav-btn" id="applyAllBtn" onclick="applyAllChanges()" style="background:var(--green);color:var(--bg-primary)">&#x2713;&#x2713; Apply All</button>
           <button class="nav-btn" id="revertBtn" onclick="revertChange(currentChangeIndex)" style="background:var(--red);color:var(--bg-primary)">&#x21A9; Revert</button>
+          <span id="ralphNavSep" style="display:none;width:1px;height:20px;background:var(--border);margin:0 4px"></span>
+          <button class="nav-btn" id="ralphRetryBtn" onclick="ralphDecide('retry')" style="display:none;background:var(--yellow);color:var(--bg-primary)">&#x21BA; Retry</button>
+          <button class="nav-btn" id="ralphSkipBtn" onclick="ralphDecide('skip')" style="display:none;background:var(--bg-tertiary);color:var(--text-secondary)">&#x21E5; Skip</button>
+          <button class="nav-btn" id="ralphStopNavBtn" onclick="ralphDecide('stop')" style="display:none;background:var(--red);color:var(--bg-primary)">&#x25A0; Stop</button>
         </div>
       </div>
 
@@ -792,10 +805,11 @@
         </div>
       `;
 
+      const expl = change.explanation || {};
       document.getElementById('technicalExpl').textContent =
-        showEnglish ? (change.explanation.technical_en || change.explanation.technical) : change.explanation.technical;
+        showEnglish ? (expl.technical_en || expl.technical || '') : (expl.technical || '');
       document.getElementById('plainExpl').textContent =
-        showEnglish ? (change.explanation.plain_en || change.explanation.plain) : change.explanation.plain;
+        showEnglish ? (expl.plain_en || expl.plain || '') : (expl.plain || '');
 
       currentChangeIndex = index;
       updateNavigation();
@@ -844,12 +858,17 @@
           btn.textContent = '✅ Done';
           currentResponse.changes[index]._applied = true;
         } else throw new Error(result.status);
+
+        // In Ralph paused state, applying signals 'accept' to continue the loop
+        if (currentMode === 'ralph' && ralphPausedIteration !== null) {
+          await ralphDecide('accept');
+        }
       } catch (err) {
         alert(`Apply failed: ${err.message}`);
       } finally {
         btn.disabled = false;
         setTimeout(() => {
-          btn.textContent = currentResponse.changes[index]?._applied ? '✅ Applied' : '✓ Apply';
+          btn.textContent = currentResponse?.changes[index]?._applied ? '✅ Applied' : '✓ Apply';
         }, 1500);
       }
     }
@@ -870,6 +889,11 @@
         const total = json.data.results.length;
         btn.textContent = applied === total ? `✅ All ${total} applied` : `⚠ ${applied}/${total}`;
         currentResponse.changes.forEach(c => c._applied = true);
+
+        // In Ralph paused state, applying all signals 'accept' to continue the loop
+        if (currentMode === 'ralph' && ralphPausedIteration !== null) {
+          await ralphDecide('accept');
+        }
       } catch (err) { alert(`Apply all failed: ${err.message}`); }
       finally {
         btn.disabled = false;
@@ -968,8 +992,18 @@
       const done = ralphTasks.filter(t => t.complete).length;
       count.textContent = `${done}/${ralphTasks.length}`;
 
-      list.innerHTML = ralphTasks.map((task, i) => `
-        <div class="task-item ${task.complete ? 'complete' : ''}" data-idx="${i}">
+      // First incomplete task is the active one while the session is running
+      const activeIdx = ralphSessionId ? ralphTasks.findIndex(t => !t.complete) : -1;
+
+      list.innerHTML = ralphTasks.map((task, i) => {
+        const isActive = i === activeIdx;
+        const classes = [
+          'task-item',
+          task.complete ? 'complete' : '',
+          isActive ? 'working' : '',
+        ].filter(Boolean).join(' ');
+        return `
+        <div class="${classes}" data-idx="${i}">
           <div class="task-checkbox ${task.complete ? 'done' : ''}">
             ${task.complete ? '&#x2713;' : ''}
           </div>
@@ -978,8 +1012,8 @@
             onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
           >${escapeHtml(task.text)}</div>
           ${ralphSessionId ? '' : `<span class="task-remove" onclick="ralphRemoveTask(${i})" title="Remove">&#x2715;</span>`}
-        </div>
-      `).join('');
+        </div>`;
+      }).join('');
     }
 
     function ralphAddTask() {
@@ -1018,11 +1052,13 @@
       const btn = document.getElementById('decomposeBtn');
       const status = document.getElementById('decomposeStatus');
       btn.disabled = true;
-      btn.textContent = '⏳ Decomposing...';
+      btn.textContent = 'Decompose';
+      document.getElementById('decomposeSpinner').style.display = '';
       status.textContent = '';
 
       try {
         const resolvedPath = await resolveProjectPath();
+        resolvedProjectPath = resolvedPath;
         const res = await fetch(`${API_BASE}/loop/decompose`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1034,6 +1070,19 @@
         ralphTasks = json.data.tasks.map((t, i) => ({ text: t.text, complete: t.complete, id: i }));
         ralphRenderTasks();
 
+        // Show decompose reasoning
+        const reasonDiv = document.getElementById('decomposeReasoning');
+        const model = json.data.model || 'unknown';
+        const latency = json.data.latencyMs ? `${json.data.latencyMs}ms` : '';
+        const tokens = json.data.tokensUsed;
+        const tokenStr = tokens ? `${tokens.input} in / ${tokens.output} out` : '';
+        const parts = [`<strong>${escapeHtml(model)}</strong>`];
+        if (latency) parts.push(latency);
+        if (tokenStr) parts.push(tokenStr);
+        parts.push(`<strong>${ralphTasks.length}</strong> tasks decomposed`);
+        reasonDiv.innerHTML = parts.join(' &middot; ');
+        reasonDiv.style.display = '';
+
         const warn = json.data.warnings?.length;
         status.textContent = warn ? `⚠ ${warn} validation warning${warn > 1 ? 's' : ''}` : `✓ ${ralphTasks.length} tasks`;
       } catch (err) {
@@ -1041,6 +1090,7 @@
       } finally {
         btn.disabled = false;
         btn.textContent = '⚡ Decompose';
+        document.getElementById('decomposeSpinner').style.display = 'none';
       }
     }
 
@@ -1062,6 +1112,7 @@
 
       try {
         const resolvedPath = await resolveProjectPath();
+        resolvedProjectPath = resolvedPath;
         const prdContent = ralphBuildPrd();
         const autoPilot = document.getElementById('ralphAutoPilot').checked;
         const autoCommit = document.getElementById('ralphAutoCommit').checked;
@@ -1074,7 +1125,7 @@
             prdContent,
             projectPath: resolvedPath,
             maxIterations,
-            autoApply: true,
+            autoApply: autoPilot, // user applies manually via nav bar when not in autopilot
             autoCommit,
             autoPilot,
           }),
@@ -1102,7 +1153,9 @@
 
       ralphEventSource = new EventSource(`${API_BASE}/loop/events/${sessionId}`);
       ralphEventSource.onmessage = (e) => {
-        try { ralphHandleEvent(JSON.parse(e.data)); } catch { /* ignore malformed */ }
+        let event;
+        try { event = JSON.parse(e.data); } catch { return; }
+        ralphHandleEvent(event);
       };
       ralphEventSource.onerror = () => {
         // SSE may close naturally when session ends — check status
@@ -1122,8 +1175,27 @@
           ralphPausedIteration = event.iteration;
           ralphSetStatus('paused', `Review iteration ${event.iteration}`);
           ralphMarkIterEntry(event.iteration, 'paused');
+          // Always show nav bar when paused so loop controls are visible
+          document.getElementById('navBar').style.display = 'flex';
           // Load result into diff viewer
           if (event.result && event.result.changes?.length > 0) {
+            currentResponse = event.result;
+            currentChangeIndex = 0;
+            document.getElementById('explanationBar').style.display = 'flex';
+            renderChange(0);
+            updateNavigation();
+          }
+          // Show Ralph loop control buttons in nav bar
+          ralphShowNavControls(true);
+          break;
+        }
+
+        case 'iteration:end':
+          ralphPausedIteration = null;
+          ralphShowNavControls(false);
+          ralphMarkIterDone(event.iteration, event.decision, event.success, event.appliedFiles, event.durationMs);
+          // Load changes into diff viewer so every iteration is reviewable
+          if (event.result?.changes?.length > 0) {
             currentResponse = event.result;
             currentChangeIndex = 0;
             document.getElementById('navBar').style.display = 'flex';
@@ -1131,15 +1203,6 @@
             renderChange(0);
             updateNavigation();
           }
-          // Show decision buttons on the iteration entry
-          ralphShowDecisionButtons(event.iteration);
-          break;
-        }
-
-        case 'iteration:end':
-          ralphPausedIteration = null;
-          ralphMarkIterDone(event.iteration, event.decision, event.success, event.appliedFiles, event.durationMs);
-          // Update task checkmarks
           ralphSyncTasksFromStatus();
           break;
 
@@ -1168,24 +1231,11 @@
 
     // --- Decision buttons (human-in-the-loop) ---
 
-    function ralphShowDecisionButtons(iteration) {
-      const entry = document.querySelector(`.iter-entry[data-iter="${iteration}"]`);
-      if (!entry) return;
-
-      // Remove any existing decision row
-      const existing = entry.querySelector('.iter-decision');
-      if (existing) existing.remove();
-
-      const div = document.createElement('div');
-      div.className = 'iter-decision';
-      div.innerHTML = `
-        <button class="decision-btn decision-accept" onclick="ralphDecide('accept')">&#x2713; Accept</button>
-        <button class="decision-btn decision-retry"  onclick="ralphDecide('retry')">&#x21BA; Retry</button>
-        <button class="decision-btn decision-skip"   onclick="ralphDecide('skip')">&#x21E5; Skip</button>
-        <button class="decision-btn decision-stop"   onclick="ralphDecide('stop')">&#x25A0; Stop</button>
-      `;
-      entry.appendChild(div);
-      entry.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    function ralphShowNavControls(show) {
+      const ids = ['ralphNavSep', 'ralphRetryBtn', 'ralphSkipBtn', 'ralphStopNavBtn'];
+      ids.forEach(id => {
+        document.getElementById(id).style.display = show ? '' : 'none';
+      });
     }
 
     async function ralphDecide(decision) {
@@ -1200,10 +1250,9 @@
           const j = await res.json();
           throw new Error(j.error || `HTTP ${res.status}`);
         }
-        // Remove decision buttons from the entry
+        // Hide loop control buttons and mark iteration as decided
+        ralphShowNavControls(false);
         if (ralphPausedIteration !== null) {
-          const entry = document.querySelector(`.iter-entry[data-iter="${ralphPausedIteration}"]`);
-          entry?.querySelector('.iter-decision')?.remove();
           ralphMarkIterEntry(ralphPausedIteration, 'decided');
         }
       } catch (err) {
@@ -1234,7 +1283,8 @@
         <div class="iter-header" onclick="ralphLoadIteration(${iteration})">
           <span class="iter-num">#${iteration}</span>
           <span class="iter-task" title="${escapeHtml(task)}">${escapeHtml(task)}</span>
-          <span class="iter-badge ${status}" id="iter-badge-${iteration}">${status === 'running' ? '…' : status}</span>
+          <span id="iter-spinner-${iteration}" class="spinner-sm" style="${status === 'running' ? '' : 'display:none;'}"></span>
+          <span class="iter-badge ${status}" id="iter-badge-${iteration}" style="${status === 'running' ? 'display:none;' : ''}">${status}</span>
           <span class="iter-duration" id="iter-dur-${iteration}">${durationMs != null ? (durationMs / 1000).toFixed(1) + 's' : ''}</span>
         </div>
       `;
@@ -1244,9 +1294,13 @@
 
     function ralphMarkIterEntry(iteration, status) {
       const badge = document.getElementById(`iter-badge-${iteration}`);
+      const spinner = document.getElementById(`iter-spinner-${iteration}`);
       if (!badge) return;
+      const isRunning = status === 'running';
       badge.className = `iter-badge ${status}`;
       badge.textContent = status;
+      badge.style.display = isRunning ? 'none' : '';
+      if (spinner) spinner.style.display = isRunning ? '' : 'none';
     }
 
     function ralphMarkIterDone(iteration, decision, success, appliedFiles, durationMs) {
@@ -1334,6 +1388,8 @@
         messages[reason] || reason);
       document.getElementById('ralphRunBtn').style.display = '';
       document.getElementById('ralphStopBtn').style.display = 'none';
+      ralphShowNavControls(false);
+      ralphPausedIteration = null;
       if (ralphEventSource) { ralphEventSource.close(); ralphEventSource = null; }
       ralphSessionId = null;
       ralphSyncTasksFromStatus();
@@ -1344,6 +1400,9 @@
       badge.className = `ralph-badge ${status}`;
       badge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
       document.getElementById('ralphStatusText').textContent = text;
+      // Show spinner while work is in progress
+      const spin = document.getElementById('ralphLoopSpinner');
+      spin.style.display = (status === 'running') ? '' : 'none';
     }
 
     async function ralphSyncStatus() {

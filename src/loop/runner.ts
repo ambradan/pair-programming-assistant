@@ -85,7 +85,7 @@ export interface LoopSession {
 export type LoopEvent =
   | { type: "iteration:start"; iteration: number; task: string }
   | { type: "iteration:paused"; iteration: number; task: string; result: AssistResponse }
-  | { type: "iteration:end"; iteration: number; task: string; decision: HumanDecision | "auto"; success: boolean; appliedFiles: string[]; durationMs: number; costUsd?: number }
+  | { type: "iteration:end"; iteration: number; task: string; decision: HumanDecision | "auto"; success: boolean; appliedFiles: string[]; durationMs: number; costUsd?: number; result?: AssistResponse }
   | { type: "task:blocked"; iteration: number; task: string; reason: string }
   | { type: "commit:done"; iteration: number; hash?: string; message: string }
   | { type: "commit:failed"; iteration: number; error: string }
@@ -96,38 +96,114 @@ export type LoopEvent =
 // Decomposition
 // ---------------------------------------------------------------------------
 
-const DECOMPOSE_SYSTEM_PROMPT = `You are a technical project planner. Given a user request and codebase context, break the work into specific, ordered implementation tasks.
+const DECOMPOSE_SYSTEM_PROMPT = `You are a project planning assistant. You break down coding tasks into 3-10 concrete implementation steps.
 
-Output ONLY a markdown checklist — no headers, no explanations, no text outside the list.
+You MUST respond with ONLY a valid JSON array. No prose, no markdown, no explanation — just the JSON array.
 
-Each task must:
-- Start with an imperative verb (Add, Create, Refactor, Update, Extract, Fix, Remove, etc.)
-- Be specific enough to implement in one focused coding session
-- Be ordered by dependency (tasks that others depend on come first)
+Each element is an object with exactly two keys:
+- "task": string — imperative verb phrase (e.g. "Add JWT validation to auth middleware")
+- "seq": integer starting at 1, ordered by dependency
 
-Format exactly like this:
-- [ ] First task
-- [ ] Second task
-- [ ] Third task`;
+Example response:
+[{"task":"Extract auth logic into src/auth/jwt.ts","seq":1},{"task":"Add rate limiting middleware","seq":2},{"task":"Update route handlers to use new middleware","seq":3}]`;
+
+interface DecomposeItem {
+  task: string;
+  seq: number;
+}
+
+/**
+ * Parse the JSON array returned by the decompose LLM call.
+ * Strips markdown fences and leading/trailing prose before parsing.
+ */
+function parseDecomposeJson(raw: string): DecomposeItem[] {
+  let text = raw.trim();
+
+  // Strip injected system tags (e.g. <system-reminder>…</system-reminder>)
+  text = text.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/gi, "").trim();
+
+  // Strip markdown fences
+  text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+
+  // Extract the outermost [ ... ] block
+  const start = text.indexOf("[");
+  let end     = text.lastIndexOf("]");
+
+  if (start === -1) {
+    throw new Error("No JSON array in LLM output: " + text.slice(0, 300));
+  }
+
+  // Handle truncated output — if [ exists but ] is missing or before [,
+  // close the array after the last complete object (ends with })
+  if (end === -1 || end <= start) {
+    const fragment = text.slice(start);
+    const lastBrace = fragment.lastIndexOf("}");
+    if (lastBrace === -1) {
+      throw new Error("Truncated JSON with no complete objects: " + text.slice(0, 300));
+    }
+    text = fragment.slice(0, lastBrace + 1) + "]";
+    end = text.length - 1;
+  } else {
+    text = text.slice(start, end + 1);
+    end = text.length - 1;
+  }
+
+  const parsed = JSON.parse(text) as unknown[];
+
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    throw new Error("LLM returned an empty task list");
+  }
+
+  return parsed
+    .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
+    .map((item, i) => ({
+      // Accept "task", "description", or "name" keys
+      task: String(item["task"] ?? item["description"] ?? item["name"] ?? "").trim(),
+      seq:  typeof item["seq"] === "number" ? item["seq"]
+          : typeof item["sequence"] === "number" ? item["sequence"]
+          : i + 1,
+    }))
+    .filter((item) => item.task.length > 0)
+    .sort((a, b) => a.seq - b.seq);
+}
 
 /**
  * Decompose a free-text user request into a PRD markdown checklist.
+ * JSON output from the LLM guarantees a parseable structure regardless of model.
  */
+export interface DecomposeResult {
+  prdContent: string;
+  model: string;
+  latencyMs: number;
+  tokensUsed: { input: number; output: number };
+}
+
 export async function decompose(
   llm: LLMProvider,
   message: string,
   projectContext: string
-): Promise<string> {
-  const userPrompt = projectContext
-    ? `${message}\n\nProject context:\n${projectContext}`
-    : message;
+): Promise<DecomposeResult> {
+  const parts = [`Project to decompose:\n${message}`];
+  if (projectContext) parts.push(`Codebase context:\n${projectContext}`);
+  parts.push("Respond with ONLY the JSON array:");
+  const userPrompt = parts.join("\n\n");
 
   const response = await llm.complete(DECOMPOSE_SYSTEM_PROMPT, userPrompt, {
     forceModel: "power",
-    maxTokens: 1024,
+    maxTokens: 4096,
   });
 
-  return response.content.trim();
+  console.log(`[decompose] Raw LLM output (${response.content.length} chars): ${response.content.slice(0, 500)}`);
+
+  const items = parseDecomposeJson(response.content);
+  const prdContent = items.map((item) => `- [ ] ${item.task}`).join("\n");
+
+  return {
+    prdContent,
+    model: response.model,
+    latencyMs: response.latencyMs,
+    tokensUsed: response.tokensUsed,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -372,7 +448,7 @@ export async function* runLoop(
     // Handle retry — re-run same iteration index without advancing
     if (decision === "retry") {
       iteration--; // will be incremented by for-loop, net effect: same iteration
-      yield { type: "iteration:end", iteration, task: task.text, decision: "retry", success: false, appliedFiles: [], durationMs: Date.now() - iterStart };
+      yield { type: "iteration:end", iteration, task: task.text, decision: "retry", success: false, appliedFiles: [], durationMs: Date.now() - iterStart, result: assistResponse };
       continue;
     }
 
@@ -393,7 +469,7 @@ export async function* runLoop(
       session.tasks = parseTasks(session.prdContent);
       session.currentTask = null;
 
-      yield { type: "iteration:end", iteration, task: task.text, decision: "skip", success: true, appliedFiles: [], durationMs: Date.now() - iterStart };
+      yield { type: "iteration:end", iteration, task: task.text, decision: "skip", success: true, appliedFiles: [], durationMs: Date.now() - iterStart, result: assistResponse };
       continue;
     }
 
@@ -422,7 +498,7 @@ export async function* runLoop(
     session.iterations.push(iterResult);
     session.currentTask = null;
 
-    yield { type: "iteration:end", iteration, task: task.text, decision, success: true, appliedFiles, durationMs };
+    yield { type: "iteration:end", iteration, task: task.text, decision, success: true, appliedFiles, durationMs, result: assistResponse };
 
     // Auto-commit if enabled and we applied something
     if (config.autoCommit && appliedFiles.length > 0) {
